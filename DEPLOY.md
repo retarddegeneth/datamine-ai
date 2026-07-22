@@ -1,4 +1,4 @@
-# deploy datamine.ai on render
+# deploy datamine on render
 - fork/clone https://github.com/retarddegeneth/datamine-ai
 - new web service on render
 - build: pip install -r requirements.txt

@@ -21,13 +21,13 @@ HEAD = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>datamine.ai — upload data, get paid onchain</title>
-<meta property="og:title" content="datamine.ai — upload data, get paid onchain">
+<title>datamine — upload data, get paid onchain</title>
+<meta property="og:title" content="datamine — upload data, get paid onchain">
 <meta property="og:description" content="monetize raw data by licensing to AI companies. transparent, onchain, secure.">
-<meta property="og:url" content="https://www.datamine.ai">
+<meta property="og:url" content="https://www.datamine">
 <meta property="og:image" content="/static/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="datamine.ai — upload data, get paid onchain">
+<meta name="twitter:title" content="datamine — upload data, get paid onchain">
 <meta name="twitter:image" content="/static/og-image.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -98,7 +98,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary)
 <div class="scanlines"></div>
 <div class="container">
 <nav>
-<div class="brand">datamine://</div>
+<div class="brand">datamine</div>
 <div class="links">
 <a href="/">browse</a>
 <a href="/upload">upload</a>
@@ -110,8 +110,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary)
 
 FOOT = """
 <footer>
-<div class="brand">datamine://</div>
-<div class="term">datamine.ai v0.1 // upload data, get paid onchain // robinhood chain</div>
+<div class="brand">datamine</div>
+<div class="term">datamine v0.1 // upload data, get paid onchain // robinhood chain</div>
 </footer>
 </div>
 </body>
@@ -475,7 +475,7 @@ def render_docs():
 <h2 class="section-title">docs</h2>
 <div class="manifesto-grid">
 <div class="manifesto-block">
-<h3>What is datamine.ai?</h3>
+<h3>What is datamine?</h3>
 <p>Creators upload structured data. Expert review within 24 hours. Licensed to vetted AI training companies. Payouts on Robinhood Chain in under 60 seconds. Fixed per-file rates. No hidden fees.</p>
 </div>
 <div class="manifesto-block">
