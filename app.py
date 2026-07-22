@@ -382,20 +382,20 @@ def render_review(pending):
     if not pending:
         pending_html = '<div class="meta" style="color:#64748b;">no pending reviews.</div>'
     else:
-        pending_html = '<div class="grid">' + '\n'.join([
+        pending_html = '<div class="grid\">' + '\n'.join([
             f"""
 <div class="card">
-<h3>{v['name']} <span style="color:var(--dim);font-size:11px">{v['dtype']}</span></h3>
-<div>{v['desc'] or 'no description'}</div>
-<div class="meta">created {v['created']} | floor ${v['floor']} | {v.get('wallet','no wallet')}</div>
-<div class="meta">status: {v.get('status','pending')}</div>
-<div style="display:flex;gap:10px;margin-top:10px">
-  <button class="btn primary wide" onclick="reviewItem('{k}','approve')">APPROVE</button>
-  <button class="btn ghost wide" onclick="reviewItem('{k}','reject')">REJECT</button>
+<h3>{item['name']} <span style=\"color:var(--dim);font-size:11px\">{item['dtype']}</span></h3>
+<div>{item['desc'] or 'no description'}</div>
+<div class=\"meta\">created {item['created']} | floor ${item['floor']} | {item.get('wallet','no wallet')}</div>
+<div class=\"meta\">status: {item.get('status','pending')}</div>
+<div style=\"display:flex;gap:10px;margin-top:10px\">
+  <button class=\"btn primary wide\" onclick=\"reviewItem('{item['id']}','approve')\">APPROVE</button>
+  <button class=\"btn ghost wide\" onclick=\"reviewItem('{item['id']}','reject')\">REJECT</button>
 </div>
-<div id="review-result-{k}" class="result" style="margin-top:8px"></div>
+<div id=\"review-result-{item['id']}\" class=\"result\" style=\"margin-top:8px\"></div>
 </div>
-""" for k,v in pending]) + '</div>'
+""" for item in pending]) + '</div>'
     return f"""
 <section class="section-inner">
 <h2 class="section-title">REVIEW QUEUE</h2>
@@ -463,8 +463,8 @@ async function submitBid(id){{
   const r = await fetch('/api/bids', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify(payload)}});
   const data = await r.json();
   const el = document.getElementById('result');
-  if(data.ok){ el.textContent = 'BID OK | top = '+data.top['eth']+' ETH by '+data.top['buyer']; }
-  else { el.textContent = 'ERROR: '+(data.error||'unknown'); }
+  if(data.ok){{ el.textContent = 'BID OK | top = '+data.top['eth']+' ETH by '+data.top['buyer']; }}
+  else {{ el.textContent = 'ERROR: '+(data.error||'unknown'); }}
 }}
 </script>
 """ + FOOT
