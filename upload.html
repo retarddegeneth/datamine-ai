@@ -31,7 +31,16 @@
   <section class="section-inner">
     <h2 class="section-title">UPLOAD DATA</h2>
     <p class="sub">submit structured data. secure. encrypted. reviewed within 24 hours. paid onchain.</p>
-    <form id="uploadForm" class="form" onsubmit="return false;" style="margin-top:18px;">
+    
+    <div id="walletSection" style="margin-top:18px; padding:18px; border-radius:16px; background:var(--card); border:1px solid rgba(15,23,42,0.06);">
+      <h4 style="font-size:13px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px;">WALLET VERIFICATION</h4>
+      <div id="walletStatus" style="font-size:13px; color:var(--muted); margin-bottom:10px;">not connected</div>
+      <input id="walletInput" placeholder="0x... on Robinhood Chain" style="width:100%; margin-bottom:10px;">
+      <button class="btn primary wide" onclick="connectWallet()" id="connectBtn">CONNECT WALLET</button>
+      <button class="btn primary wide" onclick="signMessage()" id="signBtn" style="display:none; margin-top:10px;">SIGN VERIFICATION</button>
+    </div>
+
+    <form id="uploadForm" class="form" onsubmit="return false;" style="margin-top:18px;" enctype="multipart/form-data">
       <label>
         <span>DATA NAME</span>
         <input id="name" maxlength="64" placeholder="e.g. eth_prices_daily.json">
@@ -53,8 +62,13 @@
         <textarea id="desc" rows="4" placeholder="what's inside, sources, structure note, use case"></textarea>
       </label>
       <label>
+        <span>FILE UPLOAD</span>
+        <input type="file" id="fileInput" style="padding:8px;" onchange="handleFileSelect()">
+        <div id="fileInfo" style="font-size:12px; color:var(--dim); margin-top:6px;"></div>
+      </label>
+      <label>
         <span>FILE PREVIEW (first 8KB)</span>
-        <textarea id="preview" rows="8" placeholder="paste preview content for buyers"></textarea>
+        <textarea id="preview" rows="8" placeholder="paste preview content for buyers, or it will be auto-extracted from file"></textarea>
       </label>
       <label>
         <span>REQUESTED LICENSE FLOOR (USD)</span>
@@ -71,10 +85,10 @@
       </label>
       <label>
         <span>WALLET ADDRESS (for payouts)</span>
-        <input id="wallet" placeholder="0x... on Robinhood Chain">
+        <input id="wallet" placeholder="0x... on Robinhood Chain" readonly>
       </label>
       <div style="display:grid;gap:10px;max-width:420px">
-        <button class="btn primary wide" onclick="submitListing()">SUBMIT FOR REVIEW</button>
+        <button class="btn primary wide" onclick="submitListing()" id="submitBtn" disabled>SUBMIT FOR REVIEW</button>
       </div>
       <div id="result" class="result" style="margin-top:14px"></div>
     </form>
@@ -83,26 +97,159 @@
       <p>JSON, CSV, XML, TXT, code files, datasets. up to 4K resolution for media. files are encrypted immediately on upload and stored in private isolated buckets. never publicly accessible.</p>
     </div>
   </section>
-  <footer>datamine v0.2 // upload data, get paid onchain // robinhood chain</footer>
+  <footer>datamine v0.3 // upload data, get paid onchain // robinhood chain</footer>
 </div>
 <script>
 const TERMS = {30:'30 days',90:'90 days',365:'365 days',0:'perpetual'};
+let currentWallet = '';
+let currentNonce = '';
+let isVerified = false;
+
+function updateWalletUI() {
+  const status = document.getElementById('walletStatus');
+  const connectBtn = document.getElementById('connectBtn');
+  const signBtn = document.getElementById('signBtn');
+  const walletInput = document.getElementById('walletInput');
+  const walletField = document.getElementById('wallet');
+  const submitBtn = document.getElementById('submitBtn');
+  
+  walletField.value = currentWallet;
+  
+  if (!currentWallet) {
+    status.textContent = 'not connected';
+    connectBtn.style.display = 'block';
+    signBtn.style.display = 'none';
+    walletInput.style.display = 'block';
+    submitBtn.disabled = true;
+  } else if (!isVerified) {
+    status.textContent = 'wallet: ' + currentWallet.slice(0, 10) + '... (not verified)';
+    connectBtn.style.display = 'none';
+    signBtn.style.display = 'block';
+    walletInput.style.display = 'none';
+    submitBtn.disabled = true;
+  } else {
+    status.textContent = 'wallet: ' + currentWallet.slice(0, 10) + '... (verified)';
+    connectBtn.style.display = 'none';
+    signBtn.style.display = 'none';
+    walletInput.style.display = 'none';
+    submitBtn.disabled = false;
+  }
+}
+
+async function connectWallet() {
+  const wallet = document.getElementById('walletInput').value.trim();
+  if (!wallet || !wallet.startsWith('0x')) {
+    alert('enter a valid wallet address');
+    return;
+  }
+  currentWallet = wallet.toLowerCase();
+  
+  // check if already verified
+  const r = await fetch('/api/nonce', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({wallet: currentWallet})});
+  const data = await r.json();
+  if (data.ok) {
+    currentNonce = data.nonce;
+  }
+  updateWalletUI();
+}
+
+async function signMessage() {
+  if (!currentWallet || !currentNonce) return;
+  
+  const message = 'datamine verify: ' + currentNonce;
+  
+  // try eth_sign first (MetaMask style)
+  if (window.ethereum) {
+    try {
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, currentWallet]
+      });
+      
+      const r = await fetch('/api/verify-wallet', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({wallet: currentWallet, signature: signature, nonce: currentNonce})
+      });
+      const data = await r.json();
+      if (data.ok && data.verified) {
+        isVerified = true;
+        updateWalletUI();
+        document.getElementById('result').textContent = 'wallet verified!';
+      } else {
+        document.getElementById('result').textContent = 'verification failed: ' + (data.error || 'unknown');
+      }
+      return;
+    } catch (err) {
+      console.log('metamask sign failed, falling back to manual', err);
+    }
+  }
+  
+  // fallback: show message for manual signing
+  alert('sign this message with your wallet:\n\n' + message + '\n\n then paste the signature below');
+  const sig = prompt('paste signature (0x...):');
+  if (!sig) return;
+  
+  const r = await fetch('/api/verify-wallet', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({wallet: currentWallet, signature: sig, nonce: currentNonce})
+  });
+  const data = await r.json();
+  if (data.ok && data.verified) {
+    isVerified = true;
+    updateWalletUI();
+    document.getElementById('result').textContent = 'wallet verified!';
+  } else {
+    document.getElementById('result').textContent = 'verification failed: ' + (data.error || 'unknown');
+  }
+}
+
+function handleFileSelect() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) return;
+  
+  document.getElementById('fileInfo').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+  
+  // auto-extract preview for text files
+  if (file.type.startsWith('text/') || file.name.endsWith('.json') || file.name.endsWith('.csv') || file.name.endsWith('.xml')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result.slice(0, 8192);
+      document.getElementById('preview').value = text;
+    };
+    reader.readAsText(file);
+  }
+}
+
 async function submitListing(){
-  const payload = {
-    name: document.getElementById('name').value,
-    dtype: document.getElementById('dtype').value,
-    desc: document.getElementById('desc').value,
-    preview: document.getElementById('preview').value,
-    floor: parseFloat(document.getElementById('floor').value || '0.50'),
-    term: parseInt(document.getElementById('term').value || '30'),
-    wallet: document.getElementById('wallet').value || '',
-  };
-  const r = await fetch('/api/listings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  if (!isVerified) {
+    document.getElementById('result').textContent = 'verify wallet first';
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('name', document.getElementById('name').value);
+  formData.append('dtype', document.getElementById('dtype').value);
+  formData.append('desc', document.getElementById('desc').value);
+  formData.append('preview', document.getElementById('preview').value);
+  formData.append('floor', document.getElementById('floor').value || '0.50');
+  formData.append('term', document.getElementById('term').value || '30');
+  formData.append('wallet', currentWallet);
+  
+  const file = document.getElementById('fileInput').files[0];
+  if (file) {
+    formData.append('file', file);
+  }
+  
+  const r = await fetch('/api/listings', {method:'POST', body: formData});
   const data = await r.json();
   const el = document.getElementById('result');
-  if(data.ok){ el.innerHTML = 'SUBMITTED: '+(data.id||'ok')+' | floor=$'+payload.floor+' | term='+TERMS[payload.term]+' | review ~24h'; }
+  if(data.ok){ el.innerHTML = 'SUBMITTED: '+(data.id||'ok')+' | review ~24h'; }
   else { el.textContent = 'ERROR: '+ (data.error||'unknown'); }
 }
+
+updateWalletUI();
 </script>
 </body>
 </html>
